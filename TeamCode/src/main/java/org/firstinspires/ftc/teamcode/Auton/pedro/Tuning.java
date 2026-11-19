@@ -1,9 +1,9 @@
-package org.firstinspires.ftc.teamcode.pedro;
+package org.firstinspires.ftc.teamcode.Auton.pedro;
 
 import com.pedropathing.tuning.autotune.Procedure;
 import com.pedropathing.tuning.autotune.Tuner;
 
-import org.firstinspires.ftc.teamcode.pedro.procedures.MecanumTuner;
+import org.firstinspires.ftc.teamcode.Auton.pedro.procedures.MecanumTuner;
 
 public class Tuning {
 
@@ -13,6 +13,7 @@ public class Tuning {
     public static Procedure mecanumTuner() {
         return new MecanumTuner();
     }
+
 
 
 
