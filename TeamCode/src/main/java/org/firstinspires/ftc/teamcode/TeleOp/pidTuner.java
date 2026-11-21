@@ -12,7 +12,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 @Config
 @TeleOp(name = "Shooter PID Tuner")
-public class pid_tuner extends OpMode {
+public class pidTuner extends OpMode {
     // Editable live in FTC Dashboard
     public static double targetVelocity = 0; // ticks per second
     public static double kS = 0, kV = 0, kP = 0, kI = 0, kD = 0;
