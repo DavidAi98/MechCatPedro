@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.TeleOp;
+package org.firstinspires.ftc.teamcode;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
@@ -11,7 +11,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 @Config
-@TeleOp(name = "Shooter PID Tuner")
+@TeleOp(name = "Shooter PID Tuner" , group = "Tuner")
 public class pidTuner extends OpMode {
     // Editable live in FTC Dashboard
     public static double targetVelocity = 0; // ticks per second
