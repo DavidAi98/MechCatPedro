@@ -16,38 +16,50 @@ import com.qualcomm.robotcore.util.Range;
 @TeleOp(name = "MechCat Drive", group = "MechCat")
 public class MechcatDriveTrain extends LinearOpMode {
 
-    private static final double INTAKE_POWER = 0.40;
+    // =====================================================================
+    // ======================  ADJUST SLIDE HERE  ==========================
+    // =====================================================================
+    // All values in encoder ticks. Also editable live in FTC Dashboard
+    // (192.168.43.1:8080/dash -> Configuration -> MechcatDriveTrain).
 
-    // ===================== SHOOTER =====================
-    // Enable ONLY after connecting and checking the shooter encoder at school.
-    private static final boolean SHOOTER_ENCODER_CONFIRMED = false;
-    private static final double SHOOTER_TICKS_PER_REV = 384.5;
-    private static final double SHOOTER_RAMP_RPM_PER_SEC = 200.0;
+    // -- Speed while holding the trigger --
+    public static double SLIDE_UP_SPEED = 900;    // ticks/sec with LT fully pressed (537.7 ticks = 1 motor turn)
+    public static double SLIDE_DOWN_SPEED = 905;  // ticks/sec with RT fully pressed
+    public static double SLIDE_MAX_LEAD = 100;    // how far the target may run ahead of the slide
 
-    // Paste tuned values from pidTuner (units: ticks/sec). Editable in FTC Dashboard.
-    public static double SHOOTER_kS = 0;
-    public static double SHOOTER_kV = 0;
-    public static double SHOOTER_kP = 0;
-    public static double SHOOTER_kI = 0;
-    public static double SHOOTER_kD = 0;
-    public static double SHOOTER_INTEGRAL_ZONE = 200;
+    // -- Safety limits --
+    public static double SLIDE_MIN = 0;     // bottom
+    public static double SLIDE_MAX = 300;  // never goes above this (set just below the real top!)
 
-    // ===================== SLIDE =====================
-    // Paste tuned values from SlideTuner (units: encoder ticks). Editable in FTC Dashboard.
-    public static double SLIDE_kP = 0;
-    public static double SLIDE_kI = 0;
-    public static double SLIDE_kD = 0;
-    public static double SLIDE_kG = 0;      // holds slide against gravity
-    public static double SLIDE_kSync = 0;   // only for independent left/right slides
-    public static double SLIDE_MAX_POWER = 1.0;
+    // -- Strength --
+    public static double SLIDE_MAX_POWER = 0.9;  // max motor power (0-1)
 
-    // Positions in ticks. MEASURE these on your robot with SlideTuner!
-    public static double SLIDE_MIN = 0;
-    public static double SLIDE_LOW = 500;
-    public static double SLIDE_MID = 1000;
-    public static double SLIDE_HIGH = 1500;
-    public static double SLIDE_MAX = 1600;  // just below the real top
-    public static double SLIDE_MANUAL_SPEED = 1500; // ticks/sec at full stick
+    // -- Control gains --
+    public static double SLIDE_kG = 0.01;   // holds slide up against gravity. Sinks? raise. Creeps up? lower.
+    public static double SLIDE_kP = 0.006;  // how hard it pushes toward the target. Slow? raise. Bounces? lower.
+    public static double SLIDE_kD = 0;      // smooths the stop. Overshoots? add a little (0.0002).
+    public static double SLIDE_kI = 0;      // usually leave 0
+    public static double SLIDE_kSync = 0;   // only if one side lags the other
+
+    // =====================================================================
+
+    // ===================== DRIVE =====================
+    public static double DRIVE_MAX_POWER = 0.40;  // normal speed
+    public static double DRIVE_SLOW_POWER = 0.20; // while holding A
+    public static double TURN_SPEED = 0.6;        // bumper turn speed (0-1)
+
+    // [OFF] private static final double INTAKE_POWER = 0.40;
+
+    // ===================== SHOOTER [OFF] =====================
+    // [OFF] private static final boolean SHOOTER_ENCODER_CONFIRMED = false;
+    // [OFF] private static final double SHOOTER_TICKS_PER_REV = 384.5;
+    // [OFF] private static final double SHOOTER_RAMP_RPM_PER_SEC = 200.0;
+    // [OFF] public static double SHOOTER_kS = 0;
+    // [OFF] public static double SHOOTER_kV = 0;
+    // [OFF] public static double SHOOTER_kP = 0;
+    // [OFF] public static double SHOOTER_kI = 0;
+    // [OFF] public static double SHOOTER_kD = 0;
+    // [OFF] public static double SHOOTER_INTEGRAL_ZONE = 200;
 
     // ===================== HOOD =====================
     // Never substitute arbitrary 0/1 endpoints. Calibrate with linkage detached.
@@ -59,45 +71,45 @@ public class MechcatDriveTrain extends LinearOpMode {
     public void runOpMode() throws InterruptedException {
         FtcDashboard dashboard = FtcDashboard.getInstance();
 
-        // ---- Drive + intake (names must match the robot configuration) ----
+        // ---- Drive (names must match the robot configuration) ----
         DcMotor frontLeft  = hardwareMap.get(DcMotor.class, "frontLeft");   // 左前
         DcMotor frontRight = hardwareMap.get(DcMotor.class, "frontRight");  // 右前
         DcMotor backLeft   = hardwareMap.get(DcMotor.class, "backLeft");    // 左后
         DcMotor backRight  = hardwareMap.get(DcMotor.class, "backRight");   // 右后
-        DcMotor intake     = hardwareMap.get(DcMotor.class, "intake");
+        // [OFF] DcMotor intake     = hardwareMap.get(DcMotor.class, "intake");
 
-        frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        frontRight.setDirection(DcMotorSimple.Direction.FORWARD);
-        backLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        backRight.setDirection(DcMotorSimple.Direction.FORWARD);
-        intake.setDirection(DcMotorSimple.Direction.FORWARD);
+        // These directions must be the SAME in every OpMode (including autonomous)!
+        frontLeft.setDirection(DcMotorSimple.Direction.FORWARD);
+        frontRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        backLeft.setDirection(DcMotorSimple.Direction.FORWARD);
+        backRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        // [OFF] intake.setDirection(DcMotorSimple.Direction.FORWARD);
 
-        DcMotor[] allMotors = {frontLeft, frontRight, backLeft, backRight, intake};
+        DcMotor[] allMotors = {frontLeft, frontRight, backLeft, backRight}; // [OFF] intake removed
         for (DcMotor motor : allMotors) {
             motor.setPower(0);
             motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
             motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         }
 
-        // ---- Shooter (optional) ----
-        DcMotorEx shooter = hardwareMap.tryGet(DcMotorEx.class, "shooter");
-        if (shooter != null) {
-            shooter.setPower(0);
-            shooter.setDirection(DcMotorSimple.Direction.FORWARD); // must match pidTuner!
-            shooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-            shooter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            shooter.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        }
+        // ---- Shooter [OFF] ----
+        // [OFF] DcMotorEx shooter = hardwareMap.tryGet(DcMotorEx.class, "shooter");
+        // [OFF] if (shooter != null) {
+        // [OFF]     shooter.setPower(0);
+        // [OFF]     shooter.setDirection(DcMotorSimple.Direction.FORWARD);
+        // [OFF]     shooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        // [OFF]     shooter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        // [OFF]     shooter.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        // [OFF] }
 
         // ---- Slide (optional): BOTH motors must be configured ----
         DcMotorEx leftSlide  = hardwareMap.tryGet(DcMotorEx.class, "ayc");
         DcMotorEx rightSlide = hardwareMap.tryGet(DcMotorEx.class, "fiona");
 
-
         boolean slideEnabled = leftSlide != null && rightSlide != null;
         if (slideEnabled) {
-            leftSlide.setDirection(DcMotorSimple.Direction.FORWARD);   // must match SlideTuner!
-            rightSlide.setDirection(DcMotorSimple.Direction.REVERSE);  // must match SlideTuner!
+            leftSlide.setDirection(DcMotorSimple.Direction.FORWARD);
+            rightSlide.setDirection(DcMotorSimple.Direction.REVERSE);
             for (DcMotorEx m : new DcMotorEx[]{leftSlide, rightSlide}) {
                 m.setPower(0);
                 m.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER); // slide MUST be at bottom on INIT
@@ -115,38 +127,37 @@ public class MechcatDriveTrain extends LinearOpMode {
         int hoodLevel = 1;
         if (hoodEnabled) hood.setPosition(HOOD_LEVEL_1);
 
-        telemetry.addLine("GAMEPAD 1:");
-        telemetry.addLine("  Left stick: drive/strafe. Right stick: turn. Hold LB: slow.");
-        telemetry.addLine("  RB: intake toggle. A: shooter toggle. D-pad L/R: shooter RPM.");
+        telemetry.addLine("CONTROLS (gamepad 1):");
+        telemetry.addLine("  Left stick Y: forward/back. Right stick X: strafe.");
+        telemetry.addLine("  LB: turn clockwise. RB: turn counterclockwise. Hold A: slow.");
+        telemetry.addLine("  Hold LT: slide up. Hold RT: slide down. Release: slide holds.");
         telemetry.addLine("  D-pad up/down: hood levels 1-5.");
-        telemetry.addLine("GAMEPAD 2:");
-        telemetry.addLine("  D-pad down/left/right/up: slide bottom/low/mid/high.");
-        telemetry.addLine("  Left stick: manual slide adjust.");
-        telemetry.addData("Shooter enabled", shooter != null && SHOOTER_ENCODER_CONFIRMED);
-        telemetry.addData("Slide enabled", slideEnabled);
+        // [OFF] telemetry.addLine("  Intake toggle / shooter toggle: (off)");
+        // [OFF] telemetry.addData("Shooter enabled", shooter != null && SHOOTER_ENCODER_CONFIRMED);
+        telemetry.addData("Slide enabled", slideEnabled ? "YES" : "NO - check config names 'ayc' / 'fiona'");
         telemetry.addData("Hood enabled", hoodEnabled);
         telemetry.addLine("Make sure the slide is fully DOWN before INIT.");
         telemetry.update();
         waitForStart();
 
-        // ---- Gamepad 1 state ----
-        boolean intakeOn = false;
-        boolean previousRightBumper = gamepad1.right_bumper;
-        boolean shooterOn = false;
-        boolean shooterFault = false;
-        boolean previousA = gamepad1.a;
-        boolean previousUp = gamepad1.dpad_up;
-        boolean previousDown = gamepad1.dpad_down;
-        boolean previousLeft = gamepad1.dpad_left;
-        boolean previousRight = gamepad1.dpad_right;
-        double targetRpm = 200.0; // Motor gearbox output RPM, NOT flywheel RPM.
-        double commandedRpm = 0.0;
-        double noFeedbackSince = -1.0;
+        // ---- Gamepad state ----
+        // [OFF] boolean intakeOn = false;
+        // [OFF] boolean previousRightBumper = gamepad1.right_bumper;
+        // [OFF] boolean shooterOn = false;
+        // [OFF] boolean shooterFault = false;
+        // [OFF] boolean previousA = gamepad1.a;
+        boolean previousUp = gamepad1.dpad_up;      // used by hood
+        boolean previousDown = gamepad1.dpad_down;  // used by hood
+        // [OFF] boolean previousLeft = gamepad1.dpad_left;
+        // [OFF] boolean previousRight = gamepad1.dpad_right;
+        // [OFF] double targetRpm = 200.0;
+        // [OFF] double commandedRpm = 0.0;
+        // [OFF] double noFeedbackSince = -1.0;
 
-        // ---- Shooter PID state ----
-        double shooterTotalError = 0;
-        double shooterPreviousError = 0;
-        boolean shooterWasOn = false;
+        // ---- Shooter PID state [OFF] ----
+        // [OFF] double shooterTotalError = 0;
+        // [OFF] double shooterPreviousError = 0;
+        // [OFF] boolean shooterWasOn = false;
 
         // ---- Slide PID state ----
         double slideTarget = SLIDE_MIN;
@@ -164,11 +175,16 @@ public class MechcatDriveTrain extends LinearOpMode {
                 TelemetryPacket packet = new TelemetryPacket();
 
                 // ===================== DRIVE =====================
-                double forward = deadzone(-gamepad1.left_stick_y);
-                double strafe  = deadzone(gamepad1.left_stick_x);
-                double turn    = deadzone(gamepad1.right_stick_x);
+                // Left stick Y: forward/back. Right stick X: strafe.
+                // LB: turn clockwise. RB: turn counterclockwise. Hold A: slow.
+                double forward = deadzone(gamepad1.left_stick_y);
+                double strafe  = deadzone(gamepad1.right_stick_x);
 
-                double maxPower = gamepad1.left_bumper ? 0.20 : 0.40;
+                double turn = 0;
+                if (gamepad1.left_bumper)  turn += TURN_SPEED;   // clockwise
+                if (gamepad1.right_bumper) turn -= TURN_SPEED;   // counterclockwise
+
+                double maxPower = gamepad1.a ? DRIVE_SLOW_POWER : DRIVE_MAX_POWER;
                 double divisor = Math.max(1.0,
                         Math.abs(forward) + Math.abs(strafe) + Math.abs(turn));
                 double scale = maxPower / divisor;
@@ -178,118 +194,127 @@ public class MechcatDriveTrain extends LinearOpMode {
                 backLeft.setPower((forward - strafe + turn) * scale);
                 backRight.setPower((forward + strafe - turn) * scale);
 
-                // ===================== INTAKE =====================
-                boolean rightBumper = gamepad1.right_bumper;
-                if (rightBumper && !previousRightBumper) intakeOn = !intakeOn;
-                previousRightBumper = rightBumper;
-                intake.setPower(intakeOn ? INTAKE_POWER : 0.0);
+                // ===================== INTAKE [OFF] =====================
+                // [OFF] boolean rightBumper = gamepad1.right_bumper;
+                // [OFF] if (rightBumper && !previousRightBumper) intakeOn = !intakeOn;
+                // [OFF] previousRightBumper = rightBumper;
+                // [OFF] intake.setPower(intakeOn ? INTAKE_POWER : 0.0);
 
-                // ===================== SHOOTER =====================
-                boolean a = gamepad1.a;
-                if (a && !previousA && shooter != null
-                        && SHOOTER_ENCODER_CONFIRMED && !shooterFault) {
-                    shooterOn = !shooterOn;
-                }
-                previousA = a;
-                if (gamepad1.dpad_right && !previousRight) targetRpm += 25;
-                if (gamepad1.dpad_left && !previousLeft) targetRpm -= 25;
-                targetRpm = Range.clip(targetRpm, 100.0, 350.0);
-                previousRight = gamepad1.dpad_right;
-                previousLeft = gamepad1.dpad_left;
+                // ===================== SHOOTER [OFF] =====================
+                // [OFF] boolean a = gamepad1.a;
+                // [OFF] if (a && !previousA && shooter != null
+                // [OFF]         && SHOOTER_ENCODER_CONFIRMED && !shooterFault) {
+                // [OFF]     shooterOn = !shooterOn;
+                // [OFF] }
+                // [OFF] previousA = a;
+                // [OFF] if (gamepad1.dpad_right && !previousRight) targetRpm += 25;
+                // [OFF] if (gamepad1.dpad_left && !previousLeft) targetRpm -= 25;
+                // [OFF] targetRpm = Range.clip(targetRpm, 100.0, 350.0);
+                // [OFF] previousRight = gamepad1.dpad_right;
+                // [OFF] previousLeft = gamepad1.dpad_left;
+                // [OFF]
+                // [OFF] double actualRpm = 0;
+                // [OFF] double shooterPower = 0;
+                // [OFF] if (shooter != null && SHOOTER_ENCODER_CONFIRMED) {
+                // [OFF]     double goal = shooterOn ? targetRpm : 0;
+                // [OFF]     commandedRpm = shooterOn
+                // [OFF]             ? Math.min(goal, commandedRpm + SHOOTER_RAMP_RPM_PER_SEC * dt) : 0;
+                // [OFF]     double currentTps = shooter.getVelocity();
+                // [OFF]     actualRpm = currentTps * 60.0 / SHOOTER_TICKS_PER_REV;
+                // [OFF]
+                // [OFF]     if (shooterOn && commandedRpm >= 75 && actualRpm < 20) {
+                // [OFF]         if (noFeedbackSince < 0) noFeedbackSince = now;
+                // [OFF]         if (now - noFeedbackSince >= 0.75) {
+                // [OFF]             shooterFault = true;
+                // [OFF]             shooterOn = false;
+                // [OFF]             commandedRpm = 0;
+                // [OFF]         }
+                // [OFF]     } else {
+                // [OFF]         noFeedbackSince = -1;
+                // [OFF]     }
+                // [OFF]
+                // [OFF]     double targetTps = commandedRpm * SHOOTER_TICKS_PER_REV / 60.0;
+                // [OFF]     if (shooterOn && targetTps > 0) {
+                // [OFF]         double error = targetTps - currentTps;
+                // [OFF]         if (!shooterWasOn) shooterPreviousError = error;
+                // [OFF]         if (Math.abs(error) < SHOOTER_INTEGRAL_ZONE) {
+                // [OFF]             shooterTotalError += error * dt;
+                // [OFF]         } else {
+                // [OFF]             shooterTotalError = 0;
+                // [OFF]         }
+                // [OFF]         double derivative = dt > 0 ? (error - shooterPreviousError) / dt : 0;
+                // [OFF]         shooterPreviousError = error;
+                // [OFF]
+                // [OFF]         double feedforward = SHOOTER_kS + SHOOTER_kV * targetTps;
+                // [OFF]         double pid = SHOOTER_kP * error
+                // [OFF]                 + SHOOTER_kI * shooterTotalError
+                // [OFF]                 + SHOOTER_kD * derivative;
+                // [OFF]         shooterPower = Range.clip(feedforward + pid, 0.0, 1.0);
+                // [OFF]     } else {
+                // [OFF]         shooterTotalError = 0;
+                // [OFF]         shooterPreviousError = 0;
+                // [OFF]     }
+                // [OFF]     shooterWasOn = shooterOn;
+                // [OFF]     shooter.setPower(shooterPower);
+                // [OFF]
+                // [OFF]     packet.put("Shooter target RPM", commandedRpm);
+                // [OFF]     packet.put("Shooter actual RPM", actualRpm);
+                // [OFF]     packet.put("Shooter power", shooterPower);
+                // [OFF] }
 
-                double actualRpm = 0;
-                double shooterPower = 0;
-                if (shooter != null && SHOOTER_ENCODER_CONFIRMED) {
-                    double goal = shooterOn ? targetRpm : 0;
-                    commandedRpm = shooterOn
-                            ? Math.min(goal, commandedRpm + SHOOTER_RAMP_RPM_PER_SEC * dt) : 0;
-                    double currentTps = shooter.getVelocity();
-                    actualRpm = currentTps * 60.0 / SHOOTER_TICKS_PER_REV;
-
-                    // Missing/reversed feedback or a stall latches a fault until restart.
-                    if (shooterOn && commandedRpm >= 75 && actualRpm < 20) {
-                        if (noFeedbackSince < 0) noFeedbackSince = now;
-                        if (now - noFeedbackSince >= 0.75) {
-                            shooterFault = true;
-                            shooterOn = false;
-                            commandedRpm = 0;
-                        }
-                    } else {
-                        noFeedbackSince = -1;
-                    }
-
-                    double targetTps = commandedRpm * SHOOTER_TICKS_PER_REV / 60.0;
-                    if (shooterOn && targetTps > 0) {
-                        double error = targetTps - currentTps;
-                        if (!shooterWasOn) shooterPreviousError = error;
-                        if (Math.abs(error) < SHOOTER_INTEGRAL_ZONE) {
-                            shooterTotalError += error * dt;
-                        } else {
-                            shooterTotalError = 0;
-                        }
-                        double derivative = dt > 0 ? (error - shooterPreviousError) / dt : 0;
-                        shooterPreviousError = error;
-
-                        double feedforward = SHOOTER_kS + SHOOTER_kV * targetTps;
-                        double pid = SHOOTER_kP * error
-                                + SHOOTER_kI * shooterTotalError
-                                + SHOOTER_kD * derivative;
-                        shooterPower = Range.clip(feedforward + pid, 0.0, 1.0);
-                    } else {
-                        shooterTotalError = 0;
-                        shooterPreviousError = 0;
-                    }
-                    shooterWasOn = shooterOn;
-                    shooter.setPower(shooterPower);
-
-                    packet.put("Shooter target RPM", commandedRpm);
-                    packet.put("Shooter actual RPM", actualRpm);
-                    packet.put("Shooter power", shooterPower);
-                }
-
-                // ===================== SLIDE (gamepad 2) =====================
+                // ===================== SLIDE (gamepad 1 triggers) =====================
                 double slidePosition = 0;
                 if (slideEnabled) {
-                    // Presets
-                    if (gamepad2.dpad_down)  slideTarget = SLIDE_MIN;
-                    if (gamepad2.dpad_left)  slideTarget = SLIDE_LOW;
-                    if (gamepad2.dpad_right) slideTarget = SLIDE_MID;
-                    if (gamepad2.dpad_up)    slideTarget = SLIDE_HIGH;
-
-                    // Manual fine adjust: stick moves the TARGET, PID follows it
-                    double manual = deadzone(-gamepad2.left_stick_y);
-                    slideTarget += manual * SLIDE_MANUAL_SPEED * dt;
-                    slideTarget = Range.clip(slideTarget, SLIDE_MIN, SLIDE_MAX);
-
                     int leftPos  = leftSlide.getCurrentPosition();
                     int rightPos = rightSlide.getCurrentPosition();
                     slidePosition = (leftPos + rightPos) / 2.0;
 
-                    double error = slideTarget - slidePosition;
-                    slideTotalError += error * dt;
-                    double derivative = dt > 0 ? (error - slidePreviousError) / dt : 0;
-                    slidePreviousError = error;
 
-                    double slidePower = SLIDE_kP * error
-                            + SLIDE_kI * slideTotalError
-                            + SLIDE_kD * derivative
-                            + SLIDE_kG;
+                    // Hold LT = up (press harder = faster)
+                    double up = gamepad1.left_trigger;     // 0.0 - 1.0
+                    double slidePower ;
+                    if (up > 0.5) {
 
-                    // At the bottom: rest instead of fighting gravity
-                    if (slideTarget <= SLIDE_MIN + 10 && slidePosition < SLIDE_MIN + 20) {
-                        slidePower = 0;
-                        slideTotalError = 0;
+                        slidePower=0.7;
+                    }else{
+                        slidePower =0;
                     }
-                    slidePower = Range.clip(slidePower, -SLIDE_MAX_POWER, SLIDE_MAX_POWER);
 
-                    double syncError = leftPos - rightPos;   // + means left is higher
-                    double correction = SLIDE_kSync * syncError;
-                    leftSlide.setPower(Range.clip(slidePower - correction, -1, 1));
-                    rightSlide.setPower(Range.clip(slidePower + correction, -1, 1));
+                    // Hold RT = down (press harder = faster)
+                    double down = gamepad1.right_trigger;  // 0.0 - 1.0
+                    if (down > 0.5) {
+                        slidePower =-0.7;
+                    }
+//
+//                    // Release both = target stops changing, PID holds the slide there
+//                    slideTarget = Range.clip(slideTarget, SLIDE_MIN, SLIDE_MAX);
+//
+//                    double error = slideTarget - slidePosition;
+//                    slideTotalError += error * dt;
+//                    double derivative = dt > 0 ? (error - slidePreviousError) / dt : 0;
+//                    slidePreviousError = error;
+//
+//                    double slidePower = SLIDE_kP * error
+//                            + SLIDE_kI * slideTotalError
+//                            + SLIDE_kD * derivative
+//                            + SLIDE_kG;
+//
+//                    // At the bottom: rest instead of fighting gravity
+//                    if (slideTarget <= SLIDE_MIN + 10 && slidePosition < SLIDE_MIN + 20) {
+//                        slidePower = 0;
+//                        slideTotalError = 0;
+//                    }
+//                    slidePower = Range.clip(slidePower, -SLIDE_MAX_POWER, SLIDE_MAX_POWER);
+
+
+                    leftSlide.setPower(Range.clip(slidePower, -1, 1));
+                    rightSlide.setPower(Range.clip(slidePower, -1, 1));
 
                     packet.put("Slide target", slideTarget);
                     packet.put("Slide position", slidePosition);
-                    packet.put("Slide sync error", syncError);
+                    packet.put("Slide left", leftPos);
+                    packet.put("Slide right", rightPos);
+
                     packet.put("Slide power", slidePower);
                 }
 
@@ -310,22 +335,23 @@ public class MechcatDriveTrain extends LinearOpMode {
 
                 // ===================== TELEMETRY =====================
                 dashboard.sendTelemetryPacket(packet);
-                telemetry.addData("Intake", intakeOn ? "ON" : "OFF");
-                telemetry.addData("Shooter", shooterFault ? "FAULT: restart after checking encoder/stall"
-                        : shooter == null ? "Not configured"
-                        : !SHOOTER_ENCODER_CONFIRMED ? "Disabled: encoder not confirmed"
-                        : shooterOn ? "ON" : "OFF");
-                telemetry.addData("Motor target / measured RPM", "%.0f / %.0f", targetRpm, actualRpm);
+                // [OFF] telemetry.addData("Intake", intakeOn ? "ON" : "OFF");
+                // [OFF] telemetry.addData("Shooter", shooterFault ? "FAULT: restart after checking encoder/stall"
+                // [OFF]         : shooter == null ? "Not configured"
+                // [OFF]         : !SHOOTER_ENCODER_CONFIRMED ? "Disabled: encoder not confirmed"
+                // [OFF]         : shooterOn ? "ON" : "OFF");
+                // [OFF] telemetry.addData("Motor target / measured RPM", "%.0f / %.0f", targetRpm, actualRpm);
                 telemetry.addData("Slide", slideEnabled
                         ? String.format("target %.0f / pos %.0f", slideTarget, slidePosition)
-                        : "Not configured");
+                        : "Not configured (need motors 'ayc' and 'fiona')");
+                telemetry.addData("LT / RT", "%.2f / %.2f", gamepad1.left_trigger, gamepad1.right_trigger);
                 telemetry.addData("Hood", hoodEnabled ? "Level " + hoodLevel : "Disabled: not calibrated");
                 telemetry.update();
 
                 idle();
             }
         } finally {
-            if (shooter != null) shooter.setPower(0);
+            // [OFF] if (shooter != null) shooter.setPower(0);
             if (slideEnabled) {
                 leftSlide.setPower(0);
                 rightSlide.setPower(0);

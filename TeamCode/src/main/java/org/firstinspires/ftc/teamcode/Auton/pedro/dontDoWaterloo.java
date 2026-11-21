@@ -11,8 +11,8 @@ public class dontDoWaterloo extends LinearOpMode {
 
     // ---- Settings ----
     private static final double DISTANCE_INCHES = 20;
-    private static final double DRIVE_POWER = 0.4;
-    private static final double TIMEOUT_SECONDS = 5;
+    private static final double DRIVE_POWER = -0.2;
+    private static final double TIMEOUT_SECONDS = 0.7;
 
     // ---- Drivetrain measurements: CHECK THESE FOR YOUR ROBOT ----
     // goBILDA 312 RPM motor = 537.7 ticks/rev, 435 RPM = 384.5, 1150 RPM = 145.1
@@ -30,10 +30,10 @@ public class dontDoWaterloo extends LinearOpMode {
         DcMotor backLeft   = hardwareMap.get(DcMotor.class, "backLeft");
         DcMotor backRight  = hardwareMap.get(DcMotor.class, "backRight");
 
-        frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        frontRight.setDirection(DcMotorSimple.Direction.FORWARD);
-        backLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        backRight.setDirection(DcMotorSimple.Direction.FORWARD);
+        frontLeft.setDirection(DcMotorSimple.Direction.FORWARD);
+        frontRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        backLeft.setDirection(DcMotorSimple.Direction.FORWARD);
+        backRight.setDirection(DcMotorSimple.Direction.REVERSE);
 
         DcMotor[] motors = {frontLeft, frontRight, backLeft, backRight};
         for (DcMotor m : motors) {
@@ -68,9 +68,23 @@ public class dontDoWaterloo extends LinearOpMode {
                     backLeft.getCurrentPosition(), backRight.getCurrentPosition());
             telemetry.update();
         }
+//        timer.reset();
+//       while (opModeIsActive()
+//                && timer.seconds() < 0.5
+//                && (frontLeft.isBusy() || frontRight.isBusy()
+//                || backLeft.isBusy() || backRight.isBusy())) {
+//            telemetry.addData("Target", target);
+//            telemetry.addData("FL / FR", "%d / %d",
+//                    frontLeft.getCurrentPosition(), frontRight.getCurrentPosition());
+//            telemetry.addData("BL / BR", "%d / %d",
+//                    backLeft.getCurrentPosition(), backRight.getCurrentPosition());
+//            telemetry.update();
+//        }
 
         // ---- Stop ----
         for (DcMotor m : motors) m.setPower(0);
+
+
 
         telemetry.addLine(timer.seconds() >= TIMEOUT_SECONDS
                 ? "Stopped by timeout: check encoders!" : "Done ✓");
