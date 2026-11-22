@@ -46,7 +46,7 @@ public class MechcatDriveTrain extends LinearOpMode {
     // ===================== DRIVE =====================
     public static double DRIVE_MAX_POWER = 0.40;  // normal speed
     public static double DRIVE_SLOW_POWER = 0.20; // while holding A
-    public static double TURN_SPEED = 0.6;        // bumper turn speed (0-1)
+    public static double TURN_SPEED = 0.9;        // bumper turn speed (0-1)
 
     // [OFF] private static final double INTAKE_POWER = 0.40;
 
